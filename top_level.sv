@@ -1,3 +1,6 @@
+// `include "dat_mem.sv"
+// `include "lfsr6.sv" // for edaplayground
+
 // starter code for Lab 4
 // CSE140L
 module top_level (
@@ -35,13 +38,18 @@ lfsr6 l6(.clk, .en(LFSR_en), .init,
          .taps, .start, .state(LFSR));
 
 logic[7:0] ct;                  // your program counter
+logic[7:0] offset;
+logic[7:0] offset_inc;
 // this can act as a program counter
 always @(posedge clk)
-  if(init)
+  if(init) begin
     ct <= 0;
-  else 
+    offset <= 0;
+  end
+  else begin
 	  ct <= ct + ct_inc;     // default: next_ct = ct+1
-
+    offset <= offset + offset_inc;
+  end
 // control decode logic (does work of instr. mem and control decode)
 always_comb begin
 // list defaults here; case needs list only exceptions
@@ -55,6 +63,7 @@ always_comb begin
 // PC normally advances by 1
 // override to go back in a subroutine or forward/back in a branch 
   ct_inc    = 'b1;         // PC normally advances by 1
+  offset_inc = 'b0;
   case(ct)
     0,1: begin   
            raddr     = 'd0;         // memory read address pointer
@@ -95,8 +104,19 @@ always_comb begin
 	         raddr      = 'd0;
 		       waddr      =	'd64;
 
-           if (ct < pre_len) begin
-              data_in = 
+           if (ct <= pre_len + 6 && ct > 6) begin
+              data_in = 8'b01011111 ^ {2'b00, LFSR};
+              waddr = 'd64 + offset;
+              write_en = 'b1;
+              offset_inc = 'b1;
+              LFSR_en = 'b1;
+           end else if (ct > pre_len + 6) begin
+              data_in = data_out ^ {2'b00, LFSR};
+              waddr = 'd64 + offset;
+              write_en = 'b1;
+              raddr = 'd0 + offset - pre_len + 1;
+              offset_inc = 'b1;
+              LFSR_en = 'b1;
            end
 /* What happens next?
    1)  for pre_len cycles, bitwise XOR ASCII _ = 0x5f with current
