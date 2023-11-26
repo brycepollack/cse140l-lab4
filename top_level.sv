@@ -28,14 +28,13 @@ logic         load_LFSR;       // copy taps and start into LFSR
 wire [   5:0] LFSR;            // LFSR current value            
 logic[   7:0] scram;           // encrypted message
 logic[   7:0] ct_inc;          // prog count step (default = +1)
-logic init_l6;
 // instantiate the data memory 
 dat_mem dm1(.clk, .write_en, .raddr, .waddr,
             .data_in, .data_out);
 
 // instantiate the LFSR core
 // need one for Lab 4; may want 6 for Lab 5
-lfsr6 l6(.clk, .en(LFSR_en), .init(init_l6),
+lfsr6 l6(.clk, .en(LFSR_en), .init(load_LFSR),
          .taps, .start, .state(LFSR));
 
 logic[7:0] ct;                  // your program counter
@@ -65,7 +64,6 @@ always_comb begin
 // override to go back in a subroutine or forward/back in a branch 
   ct_inc    = 'b1;         // PC normally advances by 1
   offset_inc = 'b0;
-  init_l6 = 'b0;
   case(ct)
     0,1: begin   
            raddr     = 'd0;         // memory read address pointer
@@ -101,7 +99,6 @@ always_comb begin
     6:   begin             
 	         raddr      = 'd0;
 		       waddr      =	'd64;
-           init_l6 = 'b1;
          end       
 	default: begin
 	         raddr      = 'd0;
