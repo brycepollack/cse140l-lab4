@@ -157,6 +157,6 @@ always @(posedge clk)
    This may be more or fewer clock cycles than mine. 
    Test bench waits for a done flag, so generate one at some time.
 */
-assign done = &ct[7:0];
+assign done = offset[6];
 
 endmodule
