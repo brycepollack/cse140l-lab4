@@ -28,13 +28,14 @@ logic         load_LFSR;       // copy taps and start into LFSR
 wire [   5:0] LFSR;            // LFSR current value            
 logic[   7:0] scram;           // encrypted message
 logic[   7:0] ct_inc;          // prog count step (default = +1)
+logic init_l6;
 // instantiate the data memory 
 dat_mem dm1(.clk, .write_en, .raddr, .waddr,
             .data_in, .data_out);
 
 // instantiate the LFSR core
 // need one for Lab 4; may want 6 for Lab 5
-lfsr6 l6(.clk, .en(LFSR_en), .init,
+lfsr6 l6(.clk, .en(LFSR_en), .init(init_l6),
          .taps, .start, .state(LFSR));
 
 logic[7:0] ct;                  // your program counter
@@ -64,6 +65,7 @@ always_comb begin
 // override to go back in a subroutine or forward/back in a branch 
   ct_inc    = 'b1;         // PC normally advances by 1
   offset_inc = 'b0;
+  init_l6 = 'b0;
   case(ct)
     0,1: begin   
            raddr     = 'd0;         // memory read address pointer
@@ -99,22 +101,23 @@ always_comb begin
     6:   begin             
 	         raddr      = 'd0;
 		       waddr      =	'd64;
+           init_l6 = 'b1;
          end       
 	default: begin
 	         raddr      = 'd0;
 		       waddr      =	'd64;
 
            if (ct <= pre_len + 6 && ct > 6) begin
-              data_in = 8'b01011111 ^ {2'b00, LFSR};
+              data_in = 'h5f ^ {2'b0, LFSR};
               waddr = 'd64 + offset;
               write_en = 'b1;
               offset_inc = 'b1;
               LFSR_en = 'b1;
            end else if (ct > pre_len + 6) begin
-              data_in = data_out ^ {2'b00, LFSR};
+              raddr = offset - pre_len + 'b1;
+              data_in = data_out ^ {2'b0, LFSR};
               waddr = 'd64 + offset;
               write_en = 'b1;
-              raddr = 'd0 + offset - pre_len + 1;
               offset_inc = 'b1;
               LFSR_en = 'b1;
            end
@@ -154,6 +157,6 @@ always @(posedge clk)
    This may be more or fewer clock cycles than mine. 
    Test bench waits for a done flag, so generate one at some time.
 */
-assign done = &ct[5:0];
+assign done = &ct[7:0];
 
 endmodule
